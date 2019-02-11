@@ -82,5 +82,6 @@ for x in range(cx, right):
 transitions.append(n)
 
 # Output transition final image
-print transitions
+print "\nCentroid coordinates: ", cx, cy
+print "Transition values for each segment: ", transitions
 img.show()
