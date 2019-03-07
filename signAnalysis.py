@@ -1,87 +1,127 @@
-import PIL
 from PIL import Image, ImageDraw
 
-# Convert signature to a binary image
-img = Image.open('sign0.jpg')
-img = img.convert('L').point((lambda x : 255 if x > 150 else 0), mode = '1')
+#Function to create bounding box for image
+def drawBoundingBox(img):
+    width, height = img.size
+    left = width
+    right = 0
+    top = height
+    bottom = 0
+    for x in range(0, width):
+        for y in range(0, height):
+            color = img.getpixel((x, y))
+            if color == 0:
+                if x > right:
+                    right = x
+                if x < left:
+                    left = x
+                if y > bottom:
+                    bottom = y
+                if y < top:
+                    top = y
+    draw = ImageDraw.Draw(img)
+    draw.rectangle(((left, top), (right, bottom)))
 
-# Drawing bounding box
-width, height = img.size
-left = width
-right = 0
-top = height
-bottom = 0
-for x in range(0, width):
-    for y in range(0, height):
-        color = img.getpixel((x, y))
-        if color == 0:
-            if x > right:
-                right = x
-            if x < left:
-                left = x
-            if y > bottom:
-                bottom = y
-            if y < top:
-                top = y
-draw = ImageDraw.Draw(img)
-draw.rectangle(((left, top), (right, bottom)))
+    return img, left, right, top, bottom
 
-# Locate Centroid
-cx = 0
-cy = 0 
-n = 0
-for x in range(0, width):
-    for y in range(0, height):
-        if (img.getpixel((x,y))) == 0:
-            cx = cx + x
-            cy = cy + y
-            n = n + 1
-cx = cx / n
-cy = cy / n
+# Function to find the centroid
+def findCentroid(img, left, right, top, bottom):
+        f = open("centroid.txt", "a+")
+        cx = 0
+        cy = 0
+        n = 0
+        for x in range(left, right):
+            for y in range(top, bottom):
+                if (img.getpixel((x,y))) == 0:
+                    cx = cx + x
+                    cy = cy + y
+                    n = n + 1
+        cx = cx / n
+        cy = cy / n
+        draw.rectangle(((left, top), (cx, cy)))
+        draw.rectangle(((cx, top), (right, cy)))
+        draw.rectangle(((left, cy), (cx, bottom)))
+        draw.rectangle(((cx, cy), (right, bottom)))
+        f.write("%d\t" % cx)
+        f.write("%d\n" % cy)
+        f.close()
 
-# Divide the image at centroid to create four segments
-draw.rectangle(((left, top), (cx, cy)))
-draw.rectangle(((cx, top), (right, cy)))
-draw.rectangle(((left, cy), (cx, bottom)))
-draw.rectangle(((cx, cy), (right, bottom)))
+        return cx, cy
 
-# Find black to white transitions for each segment
-prev = img.getpixel((0,0))
-n = 0
-transitions = []
-for x in range(left, cx):
-    for y in range(top, cy):
-        curr = img.getpixel((x,y))
-        if curr is 255 and prev is 0:
-            n = n + 1
-        prev = curr
-transitions.append(n)
+#Function to find the transitions of image
+def findTransitions(img, left, right, top, bottom,cx,cy):
 
-for x in range(cx, right):
-    for y in range(cy,top):
-        curr = img.getpixel((x,y))
-        if curr is 255 and prev is 0:
-            n = n + 1
-        prev = curr
-transitions.append(n)
+    f = open("transitions.txt", "a+")
+    prev = img.getpixel((0,0))
+    n = 0
+    transitions = []
+    for x in range(left, cx):
+        for y in range(top, cy):
+            curr = img.getpixel((x,y))
+            if curr is 255 and prev is 0:
+                n = n + 1
+            prev = curr
+    transitions.append(n)
 
-for x in range(left, cx):
-    for y in range(bottom, cy):
-        curr = img.getpixel((x,y))
-        if curr is 255 and prev is 0:
-            n = n + 1
-        prev = curr
-transitions.append(n)
+    for x in range(cx, right):
+        for y in range(cy,top):
+            curr = img.getpixel((x,y))
+            if curr is 255 and prev is 0:
+                n = n + 1
+            prev = curr
+    transitions.append(n)
 
-for x in range(cx, right):
-    for y in range(bottom, cy):
-        curr = img.getpixel((x,y))
-        if curr is 255 and prev is 0:
-            n = n + 1
-        prev = curr
-transitions.append(n)
+    for x in range(left, cx):
+        for y in range(bottom, cy):
+            curr = img.getpixel((x,y))
+            if curr is 255 and prev is 0:
+                n = n + 1
+            prev = curr
+    transitions.append(n)
 
-# Output transition final image
-print "\nCentroid coordinates: ", cx, cy
-print "Transition values for each segment: ", transitions
-img.show()
+    for x in range(cx, right):
+        for y in range(bottom, cy):
+            curr = img.getpixel((x,y))
+            if curr is 255 and prev is 0:
+                n = n + 1
+            prev = curr
+    transitions.append(n)
+    for i in transitions:
+            f.write("%d\t" % i)
+    f.write("\n")
+    f.close()
+
+    return transitions
+
+#Function to find the ratio
+def findRatio(left, right, top, bottom):
+    f = open("ratio.txt", "a+")
+    ratio = (right - left)/(bottom - top)
+    f.write("%d\n" % ratio)
+    f.close()
+
+    return ratio
+
+# Function to split the image recursively
+def split(img, left, right, top, bottom, depth=0):
+    cx, cy = findCentroid(img, left, right, top, bottom)
+    if depth < 2:
+        split(img, left, cx, top, cy, depth + 1)
+        split(img, cx, right, top, cy, depth + 1)
+        split(img, left, cx, cy, bottom, depth + 1)
+        split(img, cx, right, cy, bottom, depth + 1)
+    else:
+        t = findTransitions(img, left, right, top, bottom,cx,cy)
+        r = findRatio(left, right, top, bottom)
+       
+if __name__=="__main__":
+    # Convert signature to a binary image
+    img = Image.open('sign0.jpg')
+    img = img.convert('L').point((lambda x : 255 if x > 150 else 0), mode = '1')
+    #Function call to make bounding box and get coordinates
+    img, left, right, top, bottom = drawBoundingBox(img)
+    draw = ImageDraw.Draw(img)
+    #Function call to split image into 64 segments according to centroid
+    split(img, left, right, top, bottom)
+    #Show output image
+    #img.show()
