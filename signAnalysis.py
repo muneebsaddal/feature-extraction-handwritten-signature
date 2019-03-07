@@ -42,11 +42,22 @@ def findCentroid(img, left, right, top, bottom):
         draw.rectangle(((cx, top), (right, cy)))
         draw.rectangle(((left, cy), (cx, bottom)))
         draw.rectangle(((cx, cy), (right, bottom)))
+        #Writing output to file
         f.write("%d\t" % cx)
         f.write("%d\n" % cy)
         f.close()
 
         return cx, cy
+
+#Function for transition algorithm
+def transitionAlgo(img, left, right, top, bottom, prev, n):
+    for x in range(left, right):
+        for y in range(top, bottom):
+            curr = img.getpixel((x,y))
+            if curr is 255 and prev is 0:
+                n = n + 1
+            prev = curr
+    return n
 
 #Function to find the transitions of image
 def findTransitions(img, left, right, top, bottom,cx,cy):
@@ -55,37 +66,12 @@ def findTransitions(img, left, right, top, bottom,cx,cy):
     prev = img.getpixel((0,0))
     n = 0
     transitions = []
-    for x in range(left, cx):
-        for y in range(top, cy):
-            curr = img.getpixel((x,y))
-            if curr is 255 and prev is 0:
-                n = n + 1
-            prev = curr
-    transitions.append(n)
-
-    for x in range(cx, right):
-        for y in range(cy,top):
-            curr = img.getpixel((x,y))
-            if curr is 255 and prev is 0:
-                n = n + 1
-            prev = curr
-    transitions.append(n)
-
-    for x in range(left, cx):
-        for y in range(bottom, cy):
-            curr = img.getpixel((x,y))
-            if curr is 255 and prev is 0:
-                n = n + 1
-            prev = curr
-    transitions.append(n)
-
-    for x in range(cx, right):
-        for y in range(bottom, cy):
-            curr = img.getpixel((x,y))
-            if curr is 255 and prev is 0:
-                n = n + 1
-            prev = curr
-    transitions.append(n)
+    #Calling function to calculate transitions for each segment around centroid
+    transitions.append(transitionAlgo(img, left, cx, top, cy, prev, n))
+    transitions.append(transitionAlgo(img, cx, right, cy, top, prev, n))
+    transitions.append(transitionAlgo(img, left, cx, bottom, cy, prev, n))
+    transitions.append(transitionAlgo(img, cx, right, bottom, cy, prev, n))
+    #Writing output to file
     for i in transitions:
             f.write("%d\t" % i)
     f.write("\n")
@@ -97,6 +83,7 @@ def findTransitions(img, left, right, top, bottom,cx,cy):
 def findRatio(left, right, top, bottom):
     f = open("ratio.txt", "a+")
     ratio = (right - left)/(bottom - top)
+    #Writing output to file
     f.write("%d\n" % ratio)
     f.close()
 
@@ -124,4 +111,4 @@ if __name__=="__main__":
     #Function call to split image into 64 segments according to centroid
     split(img, left, right, top, bottom)
     #Show output image
-    #img.show()
+    img.show()
