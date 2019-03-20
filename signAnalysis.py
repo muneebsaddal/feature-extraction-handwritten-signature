@@ -1,3 +1,4 @@
+import math
 from PIL import Image, ImageDraw
 
 #Function to create bounding box for image
@@ -41,61 +42,73 @@ def findCentroid(img, left, right, top, bottom):
     draw.rectangle(((left, cy), (cx, bottom)))
     draw.rectangle(((cx, cy), (right, bottom)))
     #Writing output to file
-    #h.write("%d, " % cx)
-    #h.write("%d\n" % cy)
+    h.write("%d, " % cx)
+    h.write("%d\n" % cy)
     return cx, cy
 
-#Function to find the transitions of image
-def transitions_normalValue(img, left, right, top, bottom, cx, cy):
+#Function to find the transitions, Normal value, and Angle of Inclination
+def transitions_normalValue_angleOfInclination(img, left, right, top, bottom, cx, cy):
     prev = img.getpixel((0,0))
     n = 0
+    angle = []
     normalized = []
     transitions = []
-    #Calling function to calculate transitions for each segment around centroid
+    findRatio(cx, left, cy, top)
     for x in range(left, cx):
         for y in range(top, cy):
             curr = img.getpixel((x,y))
             if curr is 255 and prev is 0:
                 n = n + 1
             prev = curr
+    angle.append(math.degrees(math.atan(((cx-left)/2)/((cy-top)/2))))
     normalized.append(((cx-left)*(cy-top))/n)
     transitions.append(n)
+    findRatio(right, cx, cy, top)
     for x in range(cx, right):
         for y in range(top, cy):
             curr = img.getpixel((x,y))
             if curr is 255 and prev is 0:
                 n = n + 1
             prev = curr
+    angle.append(math.degrees(math.atan(((right-cx)/2)/((cy-top)/2))))
     normalized.append(((right-cx)*(cy-top))/n)
     transitions.append(n)
+    findRatio(cx, left, bottom, cy)
     for x in range(left, cx):
         for y in range(cy, bottom):
             curr = img.getpixel((x,y))
             if curr is 255 and prev is 0:
                 n = n + 1
             prev = curr
+    angle.append(math.degrees(math.atan(((cx-left)/2)/((bottom-cy)/2))))
     normalized.append(((cx-left)*(bottom-cy))/n)
     transitions.append(n)
+    findRatio(right, cx, bottom, cy)
     for x in range(cx, right):
         for y in range(cy, bottom):
             curr = img.getpixel((x,y))
             if curr is 255 and prev is 0:
                 n = n + 1
             prev = curr
+    angle.append(math.degrees(math.atan(((right-cx)/2)/((bottom-cy)/2))))
     normalized.append(((right-cx)*(bottom-cy))/n)
     transitions.append(n)
     #Writing output to file
-    #for i in transitions:
-    #        g.write(" %d " % i)
-    #g.write("\n")
-    return transitions, normalized
+    for i in transitions:
+            g.write(" %d " % i)
+    g.write("\n")
+    for i in normalized:
+            e.write(" %d " % i)
+    e.write("\n")
+    for i in angle:
+            d.write(" %d " % i)
+    d.write("\n")
 
 #Function to find the ratio
 def findRatio(left, right, top, bottom): 
     ratio = (right - left)/(bottom - top)
     #Writing output to file
-    #f.write("%d\n" % ratio)
-    return ratio
+    f.write("%d\n" % ratio)
 
 # Function to split the image recursively
 def split(img, left, right, top, bottom, depth=0):
@@ -106,14 +119,15 @@ def split(img, left, right, top, bottom, depth=0):
         split(img, left, cx, cy, bottom, depth + 1)
         split(img, cx, right, cy, bottom, depth + 1)
     else:
-        t, norm = transitions_normalValue(img, left, right, top, bottom, cx, cy)
-        r = findRatio(left, right, top, bottom)
+        transitions_normalValue_angleOfInclination(img, left, right, top, bottom, cx, cy)
+        #findRatio(left, right, top, bottom)
        
 if __name__=="__main__":
-    #f = open("ratio.txt", "a+")
-    #g = open("transitions.txt", "a+")
-    #h = open("centroid.txt", "a+")
-    i = open("normalValue.txt", "a+")
+    d = open("angleOfInclination.txt", "a+")
+    e = open("normalValue.txt", "a+")
+    f = open("ratio.txt", "a+")
+    g = open("transitions.txt", "a+")
+    h = open("centroid.txt", "a+")
     #Convert signature to a binary image
     img = Image.open('sign0.jpg')
     img = img.convert('L').point((lambda x : 255 if x > 150 else 0), mode = '1')
@@ -122,9 +136,10 @@ if __name__=="__main__":
     draw = ImageDraw.Draw(img)
     #Function call to split image into 64 segments according to centroid
     split(img, left, right, top, bottom)
-    #f.close()
-    #g.close()
-    #h.close()
-    i.close()
-    #Show output image
-    #img.save("output.jpg")
+    d.close()
+    e.close()
+    f.close()
+    g.close()
+    h.close()
+    #Save output image
+    img.save("output.jpg")
